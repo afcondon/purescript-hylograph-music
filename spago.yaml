@@ -1,3 +1,12 @@
+workspace:
+  packageSet:
+    registry: 67.0.1
+  extraPackages:
+    psd3-graph:
+      path: ../purescript-psd3-graph
+    psd3-selection:
+      path: ../purescript-psd3-selection
+
 package:
   name: psd3-music
   description: Audio interpreter for PSD3 - data sonification and accessibility
@@ -24,6 +33,7 @@ package:
     - transformers
     - tuples
     - unsafe-coerce
+    - web-pointerevents
   test:
     main: Test.Main
     dependencies:
