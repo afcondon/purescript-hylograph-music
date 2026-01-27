@@ -1,5 +1,7 @@
 # psd3-music
 
+[![Anscombe's Quartet Demo](../../site/lib-music/public/demo.jpeg)](/anscombe/)
+
 **Audio interpreter for PSD3 - Data Sonification and Accessibility**
 
 ## Vision

@@ -163,6 +163,12 @@ instance SelectionM MusicSelection_ MusicM where
       , data: []
       }
 
+  selectElement _element = MusicM \_ -> do
+    pure $ MusicSelection_ $ AudioContextSel
+      { contextId: "element"
+      , data: []
+      }
+
   selectAll selector (MusicSelection_ parent) = MusicM \_ -> do
     pure $ MusicSelection_ $ AudioContextSel
       { contextId: selector

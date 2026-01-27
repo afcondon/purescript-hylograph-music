@@ -4,6 +4,8 @@ workspace:
   extraPackages:
     psd3-graph:
       path: ../purescript-psd3-graph
+    psd3-layout:
+      path: ../purescript-psd3-layout
     psd3-selection:
       path: ../purescript-psd3-selection
 
