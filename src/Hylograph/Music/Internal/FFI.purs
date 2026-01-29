@@ -1,4 +1,4 @@
-module PSD3.Music.Internal.FFI
+module Hylograph.Music.Internal.FFI
   ( AudioContext
   , createAudioContext
   , scheduleNote

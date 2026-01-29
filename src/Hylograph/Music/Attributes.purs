@@ -1,4 +1,4 @@
-module PSD3.Music.Attributes
+module Hylograph.Music.Attributes
   ( time
   , pitch
   , duration
@@ -8,15 +8,15 @@ module PSD3.Music.Attributes
   ) where
 
 import Prelude
-import PSD3.Internal.Attribute (Attribute(..), AttributeName(..), AttributeValue(..), AttrSource(..))
+import Hylograph.Internal.Attribute (Attribute(..), AttributeName(..), AttributeValue(..), AttrSource(..))
 
 -- | Audio-specific attributes for sonification
 -- |
 -- | These parallel visual attributes (cx, cy, fill) but map to sonic parameters.
--- | They use the same Attribute infrastructure as PSD3, allowing the same
+-- | They use the same Attribute infrastructure as Hylograph, allowing the same
 -- | attribute-setting mechanisms to work for both visual and audio output.
 
--- | Type alias for clarity - these are still PSD3 Attributes
+-- | Type alias for clarity - these are still Hylograph Attributes
 -- | but we use them for audio parameters
 type AudioAttribute datum = Attribute datum
 

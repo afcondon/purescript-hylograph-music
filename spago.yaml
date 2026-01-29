@@ -2,22 +2,24 @@ workspace:
   packageSet:
     registry: 67.0.1
   extraPackages:
-    psd3-graph:
-      path: ../purescript-psd3-graph
-    psd3-layout:
-      path: ../purescript-psd3-layout
-    psd3-selection:
-      path: ../purescript-psd3-selection
+    hylograph-graph:
+      path: ../purescript-hylograph-graph
+    hylograph-layout:
+      path: ../purescript-hylograph-layout
+    hylograph-selection:
+      path: ../purescript-hylograph-selection
+    hylograph-transitions:
+      path: ../purescript-hylograph-transitions
 
 package:
-  name: psd3-music
+  name: hylograph-music
   description: Audio interpreter for PSD3 - data sonification and accessibility
   publish:
     version: 0.1.0
     license: MIT
     location:
       githubOwner: afcondon
-      githubRepo: purescript-psd3-music
+      githubRepo: purescript-hylograph-music
   dependencies:
     - arrays
     - console
@@ -30,7 +32,7 @@ package:
     - numbers
     - ordered-collections
     - prelude
-    - psd3-selection
+    - hylograph-selection
     - refs
     - transformers
     - tuples

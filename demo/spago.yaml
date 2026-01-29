@@ -1,0 +1,24 @@
+package:
+  name: hylograph-music-demo
+  description: Anscombe's String Quartet - Data sonification demo
+  dependencies:
+    - aff
+    - arrays
+    - console
+    - effect
+    - foldable-traversable
+    - halogen
+    - integers
+    - maybe
+    - numbers
+    - prelude
+    - hylograph-music
+    - refs
+    - tuples
+    - web-html
+    - web-events
+
+  bundle:
+    module: Anscombe.Main
+    outfile: public/bundle.js
+    platform: browser

@@ -1,4 +1,4 @@
-module PSD3.Music.Interpreter.WebAudio
+module Hylograph.Music.Interpreter.WebAudio
   ( MusicSelection_
   , MusicM
   , runMusicM
@@ -18,12 +18,12 @@ import Effect (Effect)
 import Effect.Class (class MonadEffect, liftEffect)
 import Effect.Ref (Ref)
 import Effect.Ref as Ref
-import PSD3.Internal.Attribute (Attribute(..), AttributeName(..), AttributeValue(..))
-import PSD3.Internal.Behavior.Types (Behavior)
-import PSD3.Internal.Capabilities.Selection (class SelectionM)
-import PSD3.Internal.Selection.Types (ElementType, JoinResult(..), SBoundOwns, SBoundInherits, SEmpty, SExiting, SPending)
-import PSD3.AST (Tree)
-import PSD3.Music.Internal.FFI (AudioContext, createAudioContext, scheduleNote, NoteParams)
+import Hylograph.Internal.Attribute (Attribute(..), AttributeName(..), AttributeValue(..))
+import Hylograph.Internal.Behavior.Types (Behavior)
+import Hylograph.Internal.Capabilities.Selection (class SelectionM)
+import Hylograph.Internal.Selection.Types (ElementType, JoinResult(..), SBoundOwns, SBoundInherits, SEmpty, SExiting, SPending)
+import Hylograph.AST (Tree)
+import Hylograph.Music.Internal.FFI (AudioContext, createAudioContext, scheduleNote, NoteParams)
 import Web.DOM.Element (Element)
 
 -- =============================================================================
@@ -108,7 +108,7 @@ runMusicM ctxRef (MusicM program) = program ctxRef
 
 -- | Extract audio parameters from attributes
 -- |
--- | Attributes come from the PSD3 attribute system. We interpret
+-- | Attributes come from the Hylograph attribute system. We interpret
 -- | specific attribute names as audio parameters.
 extractNoteParams :: forall datum. Int -> datum -> Array (Attribute datum) -> NoteParams
 extractNoteParams index datum attrs =
