@@ -1,12 +1,18 @@
-# psd3-music
+# purescript-hylograph-music
 
 [![Anscombe's Quartet Demo](../../site/lib-music/public/demo.jpeg)](/anscombe/)
 
-**Audio interpreter for PSD3 - Data Sonification and Accessibility**
+**Audio interpreter for Hylograph - Data Sonification and Accessibility**
 
 ## Vision
 
-This package explores data sonification by implementing an audio interpreter for the PSD3 tagless DSL. The same PSD3 code that creates visual charts can be interpreted as sound, making data accessible through hearing rather than sight.
+This package explores data sonification by implementing an audio interpreter for the Hylograph tagless DSL. The same Hylograph code that creates visual charts can be interpreted as sound, making data accessible through hearing rather than sight.
+
+## Installation
+
+```bash
+spago install hylograph-music
+```
 
 ## Motivation
 
@@ -21,8 +27,8 @@ Audio provides an alternative modality for data comprehension. Just as a scatter
 
 ### 2. Demonstrating Finally Tagless
 
-This package proves that PSD3's tagless architecture truly separates description from interpretation:
-- Same PSD3 program
+This package proves that Hylograph's tagless architecture truly separates description from interpretation:
+- Same Hylograph program
 - Multiple interpreters: D3 (visual), English (text), WebAudio (sound)
 - No changes to user code
 
@@ -104,24 +110,30 @@ The patterns that vision reveals spatially, hearing reveals temporally and spect
 ## Architecture
 
 ```
-psd3-selection/           # Core tagless DSL (unchanged)
-  └── Capabilities/
-      └── Selection.purs  # SelectionM typeclass
+hylograph-selection/              # Core tagless DSL (unchanged)
+  └── Hylograph/Internal/
+      └── Capabilities/Selection.purs  # SelectionM typeclass
 
-psd3-music/              # Audio interpreter (this package)
-  └── Interpreter/
-      └── WebAudio.purs  # Implements SelectionM for sound
-  └── Internal/
-      └── FFI.purs/.js   # Web Audio API bindings (future)
+hylograph-music/                  # Audio interpreter (this package)
+  └── Hylograph/Music/
+      ├── Interpreter/WebAudio.purs    # Implements SelectionM for sound
+      ├── Attributes.purs              # Audio attribute mappings
+      └── Internal/FFI.purs            # Web Audio API bindings
 ```
 
 The `MusicSelection_` type represents scheduled audio events rather than DOM elements, but the operations are the same: select, join data, set attributes, handle enter/update/exit.
+
+## Modules
+
+- `Hylograph.Music.Interpreter.WebAudio` - WebAudio interpreter
+- `Hylograph.Music.Attributes` - Sonic attribute mappings
+- `Hylograph.Music.Internal.FFI` - Web Audio API bindings
 
 ## Relationship to Music Composition DSL (Future)
 
 This sonification work is distinct from but related to a potential music composition DSL. Key differences:
 
-**psd3-music (this package):**
+**hylograph-music (this package):**
 - Data → Sound (sonification)
 - Input: Arbitrary data arrays
 - Output: Audio representation of data patterns
@@ -151,9 +163,20 @@ Early exploration. The basic package structure and type signatures exist, but th
 4. Explore attribute mappings (which data dimensions map best to which sonic parameters?)
 5. Compare with D3 interpreter to identify shared abstractions
 
+## Part of Hylograph
+
+- **hylograph-music** - Audio interpreter (this package)
+- **hylograph-selection** - Core tagless DSL
+- **hylograph-simulation** - Force simulation
+- **hylograph-graph** - Graph algorithms
+
 ## References
 
 - [Sonification Handbook](https://sonification.de/handbook/) - Academic resource on data sonification
 - [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API) - Browser audio capabilities
 - [Tidal Cycles](https://tidalcycles.org/) - Live coding music with mini-notation
 - [Strudel](https://strudel.tidalcycles.org/) - Tidal in the browser (potential compilation target)
+
+## License
+
+MIT

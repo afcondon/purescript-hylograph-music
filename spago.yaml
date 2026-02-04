@@ -13,7 +13,7 @@ workspace:
 
 package:
   name: hylograph-music
-  description: Audio interpreter for PSD3 - data sonification and accessibility
+  description: Audio interpreter for Hylograph - data sonification and accessibility
   publish:
     version: 0.1.0
     license: MIT
