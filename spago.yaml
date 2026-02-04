@@ -1,15 +1,5 @@
 workspace:
-  packageSet:
-    registry: 72.0.1
-  extraPackages:
-    hylograph-graph:
-      path: ../purescript-hylograph-graph
-    hylograph-layout:
-      path: ../purescript-hylograph-layout
-    hylograph-selection:
-      path: ../purescript-hylograph-selection
-    hylograph-transitions:
-      path: ../purescript-hylograph-transitions
+  extraPackages: {}
 
 package:
   name: hylograph-music
@@ -21,23 +11,23 @@ package:
       githubOwner: afcondon
       githubRepo: purescript-hylograph-music
   dependencies:
-    - arrays
-    - console
-    - effect
-    - either
-    - foldable-traversable
-    - functions
-    - maybe
-    - newtype
-    - numbers
-    - ordered-collections
-    - prelude
-    - hylograph-selection
-    - refs
-    - transformers
-    - tuples
-    - unsafe-coerce
-    - web-pointerevents
+    - arrays: ">=7.3.0 <8.0.0"
+    - console: ">=6.1.0 <7.0.0"
+    - effect: ">=4.0.0 <5.0.0"
+    - either: ">=6.1.0 <7.0.0"
+    - foldable-traversable: ">=6.0.0 <7.0.0"
+    - functions: ">=6.0.0 <7.0.0"
+    - hylograph-selection: ">=0.1.1 <0.2.0"
+    - maybe: ">=6.0.0 <7.0.0"
+    - newtype: ">=5.0.0 <6.0.0"
+    - numbers: ">=9.0.1 <10.0.0"
+    - ordered-collections: ">=3.2.0 <4.0.0"
+    - prelude: ">=6.0.2 <7.0.0"
+    - refs: ">=6.0.0 <7.0.0"
+    - transformers: ">=6.1.0 <7.0.0"
+    - tuples: ">=7.0.0 <8.0.0"
+    - unsafe-coerce: ">=6.0.0 <7.0.0"
+    - web-pointerevents: ">=2.0.0 <3.0.0"
   test:
     main: Test.Main
     dependencies:
