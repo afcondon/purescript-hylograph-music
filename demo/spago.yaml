@@ -17,6 +17,7 @@ package:
     - tuples
     - web-html
     - web-events
+    - js-timers
 
   bundle:
     module: Anscombe.Main
