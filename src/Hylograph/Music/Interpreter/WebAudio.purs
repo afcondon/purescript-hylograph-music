@@ -1,5 +1,15 @@
+-- | WebAudio Interpreter for HATS
+-- |
+-- | Interprets a HATS Tree as audio events using the Web Audio API.
+-- |
+-- | Each `Elem` node in the tree is interpreted as a note, with attributes
+-- | mapping to audio parameters (time, pitch, duration, volume, timbre).
+-- | `Fold` nodes iterate over data, scheduling one note per datum.
+-- |
+-- | Follows the same interpreter pattern as English.purs and Mermaid.purs,
+-- | but produces audio output instead of text.
 module Hylograph.Music.Interpreter.WebAudio
-  ( MusicSelection_
+  ( interpretAudio
   , MusicM
   , runMusicM
   , initMusicContext
@@ -8,52 +18,17 @@ module Hylograph.Music.Interpreter.WebAudio
 import Prelude
 
 import Data.Array as Array
-import Data.Foldable (class Foldable, foldl, traverse_)
+import Data.Foldable (foldl, traverse_)
 import Data.Int (toNumber)
-import Data.Tuple (Tuple(..))
-import Data.Map (Map)
-import Data.Map as Map
 import Data.Maybe (Maybe(..))
+import Data.Number as Number
+import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Effect.Class (class MonadEffect, liftEffect)
 import Effect.Ref (Ref)
 import Effect.Ref as Ref
-import Hylograph.Internal.Attribute (Attribute(..), AttributeName(..), AttributeValue(..))
-import Hylograph.Internal.Behavior.Types (Behavior)
-import Hylograph.Internal.Capabilities.Selection (class SelectionM)
-import Hylograph.Internal.Selection.Types (ElementType, JoinResult(..), SBoundOwns, SBoundInherits, SEmpty, SExiting, SPending)
-import Hylograph.AST (Tree)
+import Hylograph.HATS (Tree(..), Attr(..), Enumeration(..), TraversalOrder(..), runSomeFold)
 import Hylograph.Music.Internal.FFI (AudioContext, createAudioContext, scheduleNote, NoteParams)
-import Web.DOM.Element (Element)
-
--- =============================================================================
--- Selection Types
--- =============================================================================
-
--- | Music selection type for audio sonification
--- |
--- | Instead of DOM elements, this represents scheduled audio events.
--- | The phantom types work the same way as in D3 for type safety.
-newtype MusicSelection_ (state :: Type) (parent :: Type) (datum :: Type)
-  = MusicSelection_ (MusicSelectionImpl datum)
-
--- | Internal representation of a music selection
-data MusicSelectionImpl datum
-  = AudioContextSel
-      { contextId :: String
-      , data :: Array datum
-      }
-  | AudioEventsSel
-      { events :: Array (AudioEventWithData datum)
-      , data :: Array datum
-      }
-
--- | Audio event paired with its source datum
-type AudioEventWithData datum =
-  { event :: NoteParams
-  , datum :: datum
-  , index :: Int
-  }
 
 -- =============================================================================
 -- Monad
@@ -102,16 +77,57 @@ initMusicContext (MusicM program) = do
 runMusicM :: Ref AudioContext -> MusicM ~> Effect
 runMusicM ctxRef (MusicM program) = program ctxRef
 
+-- | Get the audio context from the monad
+getContext :: MusicM AudioContext
+getContext = MusicM \ctxRef -> Ref.read ctxRef
+
+-- =============================================================================
+-- Tree Interpreter
+-- =============================================================================
+
+-- | Interpret a HATS tree as audio events
+-- |
+-- | Walks the tree, scheduling a note for each `Elem` node.
+-- | Attributes are interpreted as audio parameters:
+-- | - `time` → note start time (seconds)
+-- | - `pitch` → frequency (Hz)
+-- | - `duration` → note length (seconds)
+-- | - `volume` → amplitude (0.0 to 1.0)
+-- | - `timbre` → waveform type ("sine", "square", "sawtooth", "triangle")
+-- |
+-- | For `Fold` nodes, iterates over the enumeration and interprets
+-- | each template result, using the iteration index for default timing.
+interpretAudio :: Tree -> MusicM Unit
+interpretAudio = go 0
+  where
+  go :: Int -> Tree -> MusicM Unit
+  go idx tree = case tree of
+    Elem { attrs, children } -> do
+      ctx <- getContext
+      liftEffect $ scheduleNote ctx (extractNoteParams idx attrs)
+      traverse_ (go 0) children
+
+    MkFold someFold ->
+      runSomeFold someFold \spec -> do
+        let items = runEnumeration spec.enumerate
+        let indexed = Array.mapWithIndex Tuple items
+        traverse_ (\(Tuple i datum) ->
+          go i (spec.template datum)
+        ) indexed
+
+    Empty -> pure unit
+
 -- =============================================================================
 -- Attribute Extraction
 -- =============================================================================
 
--- | Extract audio parameters from attributes
+-- | Extract audio parameters from HATS attributes
 -- |
--- | Attributes come from the Hylograph attribute system. We interpret
--- | specific attribute names as audio parameters.
-extractNoteParams :: forall datum. Int -> datum -> Array (Attribute datum) -> NoteParams
-extractNoteParams index datum attrs =
+-- | Attributes come from the HATS attribute system. In templates,
+-- | datum values are captured in ThunkedAttr closures. We resolve
+-- | thunks and map attribute names to audio parameters.
+extractNoteParams :: Int -> Array Attr -> NoteParams
+extractNoteParams index attrs =
   let defaults =
         { time: toNumber index * 0.5  -- Default: 500ms apart
         , frequency: 440.0             -- Default: A4
@@ -119,168 +135,65 @@ extractNoteParams index datum attrs =
         , volume: 0.5                  -- Default: moderate volume
         , waveform: "sine"             -- Default: pure tone
         }
-  in foldl (applyAttribute index datum) defaults attrs
+  in foldl applyAttr defaults attrs
+  where
+  resolveValue :: Attr -> { name :: String, value :: String }
+  resolveValue = case _ of
+    StaticAttr name value -> { name, value }
+    ThunkedAttr name thunk -> { name, value: thunk unit }
 
--- | Apply a single attribute to note parameters
-applyAttribute :: forall datum. Int -> datum -> NoteParams -> Attribute datum -> NoteParams
-applyAttribute index datum params attr = case attr of
-  IndexedAttr (AttributeName "time") _ f ->
-    case f datum index of
-      NumberValue n -> params { time = n }
+  applyAttr :: NoteParams -> Attr -> NoteParams
+  applyAttr params attr =
+    let { name, value } = resolveValue attr
+    in case name of
+      "time" -> case Number.fromString value of
+        Just n -> params { time = n }
+        Nothing -> params
+      "pitch" -> case Number.fromString value of
+        Just n -> params { frequency = n }
+        Nothing -> params
+      "duration" -> case Number.fromString value of
+        Just n -> params { duration = n }
+        Nothing -> params
+      "volume" -> case Number.fromString value of
+        Just n -> params { volume = n }
+        Nothing -> params
+      "timbre" -> params { waveform = value }
       _ -> params
-
-  IndexedAttr (AttributeName "pitch") _ f ->
-    case f datum index of
-      NumberValue n -> params { frequency = n }
-      _ -> params
-
-  IndexedAttr (AttributeName "duration") _ f ->
-    case f datum index of
-      NumberValue n -> params { duration = n }
-      _ -> params
-
-  IndexedAttr (AttributeName "volume") _ f ->
-    case f datum index of
-      NumberValue n -> params { volume = n }
-      _ -> params
-
-  IndexedAttr (AttributeName "timbre") _ f ->
-    case f datum index of
-      StringValue s -> params { waveform = s }
-      _ -> params
-
-  _ -> params  -- Ignore unknown or non-indexed attributes
 
 -- =============================================================================
--- SelectionM Instance
+-- Enumeration
 -- =============================================================================
 
-instance SelectionM MusicSelection_ MusicM where
+-- | Run an enumeration to get an array of items
+runEnumeration :: forall a. Enumeration a -> Array a
+runEnumeration = case _ of
+  FromArray arr -> arr
+  FromTree spec ->
+    case spec.order of
+      DepthFirst -> enumerateDFS spec.root spec.children spec.includeInternal
+      BreadthFirst -> enumerateBFS spec.root spec.children spec.includeInternal
+  WithContext items -> map _.datum items
 
-  select selector = MusicM \_ -> do
-    pure $ MusicSelection_ $ AudioContextSel
-      { contextId: selector
-      , data: []
-      }
+enumerateDFS :: forall a. a -> (a -> Array a) -> Boolean -> Array a
+enumerateDFS root getChildren includeInternal = go root
+  where
+  go node =
+    let children = getChildren node
+        childResults = Array.concatMap go children
+        isLeaf = Array.null children
+    in if isLeaf || includeInternal
+       then [node] <> childResults
+       else childResults
 
-  selectElement _element = MusicM \_ -> do
-    pure $ MusicSelection_ $ AudioContextSel
-      { contextId: "element"
-      , data: []
-      }
-
-  selectAll selector (MusicSelection_ parent) = MusicM \_ -> do
-    pure $ MusicSelection_ $ AudioContextSel
-      { contextId: selector
-      , data: []
-      }
-
-  openSelection (MusicSelection_ parent) selector = MusicM \_ -> do
-    pure $ MusicSelection_ $ AudioContextSel
-      { contextId: selector
-      , data: []
-      }
-
-  selectAllWithData selector (MusicSelection_ parent) = MusicM \_ -> do
-    -- For music, we don't really have child elements with data
-    -- Just return an empty selection (stub for now)
-    pure $ MusicSelection_ $ AudioEventsSel
-      { events: []
-      , data: []
-      }
-
-  -- | renderData: The high-level API for enter-update-exit
-  -- |
-  -- | For audio, we just schedule all the notes. In a more sophisticated
-  -- | implementation, update would modify playing notes and exit would stop them.
-  renderData elemType foldableData selector (MusicSelection_ emptySelection) enterAttrs updateAttrs exitAttrs = MusicM \ctxRef -> do
-    let dataArray = Array.fromFoldable foldableData
-
-    case enterAttrs of
-      Just mkAttrs -> do
-        -- Schedule notes for each datum
-        ctx <- Ref.read ctxRef
-        traverse_ (\(Tuple idx datum) -> do
-          let attrs = mkAttrs datum
-          let noteParams = extractNoteParams idx datum attrs
-          scheduleNote ctx noteParams
-        ) (Array.mapWithIndex Tuple dataArray)
-
-      Nothing -> pure unit
-
-    pure $ MusicSelection_ $ AudioEventsSel
-      { events: []  -- TODO: track scheduled events
-      , data: dataArray
-      }
-
-  -- | appendData: Simple data append (just enter, no update/exit)
-  -- |
-  -- | This is the key method for the Parabola demo.
-  -- | Takes data and attributes, schedules notes accordingly.
-  appendData elemType foldableData attrs (MusicSelection_ emptySelection) = MusicM \ctxRef -> do
-    let dataArray = Array.fromFoldable foldableData
-
-    -- Schedule a note for each datum
-    ctx <- Ref.read ctxRef
-    traverse_ (\(Tuple idx datum) -> do
-      let noteParams = extractNoteParams idx datum attrs
-      scheduleNote ctx noteParams
-    ) (Array.mapWithIndex Tuple dataArray)
-
-    pure $ MusicSelection_ $ AudioEventsSel
-      { events: []  -- TODO: track events if needed
-      , data: dataArray
-      }
-
-  -- Remaining methods: minimal stubs for now
-
-  joinData foldableData selector (MusicSelection_ emptySelection) = MusicM \_ -> do
-    pure $ JoinResult
-      { enter: MusicSelection_ $ AudioEventsSel { events: [], data: [] }
-      , update: MusicSelection_ $ AudioEventsSel { events: [], data: [] }
-      , exit: MusicSelection_ $ AudioEventsSel { events: [], data: [] }
-      }
-
-  joinDataWithKey foldableData keyFn selector (MusicSelection_ emptySelection) = MusicM \_ -> do
-    pure $ JoinResult
-      { enter: MusicSelection_ $ AudioEventsSel { events: [], data: [] }
-      , update: MusicSelection_ $ AudioEventsSel { events: [], data: [] }
-      , exit: MusicSelection_ $ AudioEventsSel { events: [], data: [] }
-      }
-
-  updateJoin (MusicSelection_ emptySelection) _elemType foldableData keyFn selector = MusicM \_ -> do
-    pure $ JoinResult
-      { enter: MusicSelection_ $ AudioEventsSel { events: [], data: [] }
-      , update: MusicSelection_ $ AudioEventsSel { events: [], data: [] }
-      , exit: MusicSelection_ $ AudioEventsSel { events: [], data: [] }
-      }
-
-  append elemType attrs (MusicSelection_ pendingSelection) = MusicM \_ -> do
-    pure $ MusicSelection_ $ AudioEventsSel { events: [], data: [] }
-
-  setAttrs attrs (MusicSelection_ boundSelection) = MusicM \_ -> do
-    pure $ MusicSelection_ $ AudioEventsSel { events: [], data: [] }
-
-  setAttrsExit attrs (MusicSelection_ exitingSelection) = MusicM \_ -> do
-    pure $ MusicSelection_ $ AudioEventsSel { events: [], data: [] }
-
-  remove (MusicSelection_ exitingSelection) = MusicM \_ -> do
-    pure unit
-
-  clear selector = MusicM \_ -> do
-    pure unit
-
-  merge (MusicSelection_ sel1) (MusicSelection_ sel2) = MusicM \_ -> do
-    pure $ MusicSelection_ $ AudioEventsSel { events: [], data: [] }
-
-  appendChild elemType attrs (MusicSelection_ emptySelection) = MusicM \_ -> do
-    pure $ MusicSelection_ $ AudioContextSel { contextId: "child", data: [] }
-
-  appendChildInheriting elemType attrs (MusicSelection_ boundSelection) = MusicM \_ -> do
-    pure $ MusicSelection_ $ AudioEventsSel { events: [], data: [] }
-
-  on behavior (MusicSelection_ selection) = MusicM \_ -> do
-    pure $ MusicSelection_ selection
-
-  renderTree (MusicSelection_ parent) tree = MusicM \_ -> do
-    pure Map.empty
+enumerateBFS :: forall a. a -> (a -> Array a) -> Boolean -> Array a
+enumerateBFS root getChildren includeInternal = go [root]
+  where
+  go queue = case Array.uncons queue of
+    Nothing -> []
+    Just { head: node, tail: rest } ->
+      let children = getChildren node
+          isLeaf = Array.null children
+          include = isLeaf || includeInternal
+          thisNode = if include then [node] else []
+      in thisNode <> go (rest <> children)
