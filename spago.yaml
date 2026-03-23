@@ -17,6 +17,7 @@ package:
     - hylograph-selection: ">=0.3.1 <0.4.0"
     - integers: ">=6.0.0 <7.0.0"
     - maybe: ">=6.0.0 <7.0.0"
+    - numbers: ">=9.0.1 <10.0.0"
     - ordered-collections: ">=3.2.0 <4.0.0"
     - prelude: ">=6.0.2 <7.0.0"
     - refs: ">=6.0.0 <7.0.0"
